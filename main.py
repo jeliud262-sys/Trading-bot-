@@ -1,3 +1,21 @@
+import os
+from threading import Thread
+from flask import Flask
+
+app = Flask('')
+
+
+@app.route('/')
+def home():
+  return 'Bot is running!'
+
+
+def run():
+  port = int(os.environ.get('PORT', 8080))
+  app.run(host='0.0.0.0', port=port)
+
+
+Thread(target=run).start()
 import requests
 import pandas as pd
 import time
@@ -41,7 +59,7 @@ def send_exness_order(action, price, sl, tp):
     print(f"✅ EXNESS EXECUTION: {action} order executed successfully!\n")
 
 def execute_trade(action, price):
-    stop_loss_pts = price * 0.1
+    stop_loss_pts = price * 0.005 
     take_profit_pts = stop_loss_pts * RISK_REWARD_RATIO
     
     if action == "BUY":
@@ -82,4 +100,4 @@ while True:
     except Exception as e:
         print("Error:", e)
         
-    time.sleep(5)
+    time.sleep(10)
