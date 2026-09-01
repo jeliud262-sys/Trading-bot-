@@ -7,11 +7,9 @@ import pandas as pd
 import requests
 from threading import Thread
 
-# Chukua credentials kutoka Render Environment Variables
 META_API_TOKEN = os.environ.get('META_API_TOKEN')
 META_ACCOUNT_ID = os.environ.get('META_ACCOUNT_ID')
 
-# Orodha ya Pair na Mipangilio ya Mkakati
 SYMBOLS = ['BTCUSDT', 'EURUSD', 'GBPUSD', 'XAUUSD', 'XAGUSDT']
 TIMEFRAME = '5m'
 EMA_SHORT = 50
@@ -23,7 +21,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-  return 'Trading Bot na MetaApi Exness Inafanya Kazi!'
+  return 'OK'
 
 
 def keep_alive():
@@ -55,11 +53,9 @@ def fetch_klines(symbol, interval=TIMEFRAME, limit=250):
 
 
 def calculate_indicators(df):
-  # Kuhesabu Exponential Moving Averages (EMA)
   df['ema_50'] = df['close'].ewm(span=EMA_SHORT, adjust=False).mean()
   df['ema_200'] = df['close'].ewm(span=EMA_LONG, adjust=False).mean()
 
-  # Kuhesabu Relative Strength Index (RSI)
   delta = df['close'].diff()
   gain = (delta.where(delta > 0, 0)).rolling(window=RSI_PERIOD).mean()
   loss = (-delta.where(delta < 0, 0)).rolling(window=RSI_PERIOD).mean()
@@ -77,7 +73,6 @@ async def send_order(symbol, trade_type):
     await connection.connect()
     await connection.wait_synchronized()
 
-    # Kubadilisha jina la pair kuendana na Exness MT5 (Mfano: BTCUSDT kuwa BTCUSD)
     mt5_symbol = symbol.replace('USDT', 'USD')
 
     if trade_type == 'BUY':
@@ -89,16 +84,13 @@ async def send_order(symbol, trade_type):
           symbol=mt5_symbol, volume=0.01
       )
 
-    print(
-        f'SUCCESS: Oda ya {trade_type} imefanikiwa kufunguka Exness kwa'
-        f' {mt5_symbol}: {res}'
-    )
+    print(f'SUCCESS: {trade_type} {mt5_symbol}: {res}')
   except Exception as e:
-    print(f'ERROR: Imeshindikana kutuma oda kupitia MetaApi: {e}')
+    print(f'ERROR: {e}')
 
 
 def execute_trade(symbol, trade_type):
-  print(f'Inatuma signal ya {trade_type} ya {symbol} kwenda Exness MT5...')
+  print(f'EXECUTE: {trade_type} {symbol}')
   asyncio.run(send_order(symbol, trade_type))
 
 
@@ -109,7 +101,6 @@ def run_bot():
         df = fetch_klines(symbol)
         df = calculate_indicators(df)
 
-        # Kutumia candle iliyofungwa hivi karibuni (-2)
         last_row = df.iloc[-2]
 
         ema_50 = last_row['ema_50']
@@ -118,27 +109,22 @@ def run_bot():
         close_price = last_row['close']
 
         print(
-            f'[{symbol}] Bei: {close_price} | EMA50: {ema_50:.2f} | EMA200:'
+            f'[{symbol}] Close: {close_price} | EMA50: {ema_50:.2f} | EMA200:'
             f' {ema_200:.2f} | RSI: {rsi:.2f}'
         )
 
-        # Masharti ya kuingia Trade
         if ema_50 > ema_200 and rsi > 50:
           execute_trade(symbol, 'BUY')
         elif ema_50 < ema_200 and rsi < 50:
           execute_trade(symbol, 'SELL')
 
     except Exception as e:
-      print(f'Kosa kwenye mzunguko wa bot: {e}')
+      print(f'Loop Error: {e}')
 
-    # Subiri dakika 5 kabla ya kuangalia tena
     time.sleep(300)
 
 
 if __name__ == '__main__':
-  # Anzisha Flask server kwenye thread ya pembeni
   t = Thread(target=keep_alive)
   t.start()
-
-  # Anzisha mzunguko wa bot
   run_bot()
